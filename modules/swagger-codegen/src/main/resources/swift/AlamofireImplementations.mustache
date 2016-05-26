@@ -12,6 +12,137 @@ class AlamofireRequestBuilderFactory: RequestBuilderFactory {
     }
 }
 
+public class GRPCStatus: JSONEncodable {
+    public var errorDescription: String?
+    public var code: Int?
+    var isError: Bool {
+        if self.code != nil {
+            print("GRPC status is error: \(self.errorDescription) \(self.code)")
+            return true
+        } else {
+            // print("GRPC status is not error: \(self.errorDescription) \(self.code)")
+            return false
+        }
+    }
+    var error: GRPCError? {
+        if self.isError {
+            return GRPCError.fromGRPC(self.code)
+        } else {
+            return nil
+        }
+    }
+
+    public init() {}
+
+    // MARK: JSONEncodable
+    func encodeToJSON() -> AnyObject {
+        var nillableDictionary = [String:AnyObject?]()
+        nillableDictionary["Error"] = self.errorDescription
+        nillableDictionary["Code"] = self.code
+        let dictionary: [String:AnyObject] = APIHelper.rejectNil(nillableDictionary) ?? [:]
+        return dictionary
+    }
+}
+
+enum GRPCError: Int, ErrorType, CustomStringConvertible {
+    case Ok = 0
+    case Canceled = 1
+    case Unknown = 2
+    case InvalidArgument = 3
+    case DeadlineExceeded = 4
+    case NotFound = 5
+    case AlreadyExists = 6
+    case PermissionDenied = 7
+    case ResourceExhausted = 8
+    case FailedPrecondition = 9
+    case Aborted = 10
+    case OutOfRange = 11
+    case Unimplemented = 12
+    case Internal = 13
+    case Unavailable = 14
+    case DataLoss = 15
+    case Unauthenticated = 16
+    case ConnectFailed = -1004
+    case ConnectionLost = -1005
+
+    static func fromGRPC(rawValue: Int?) -> GRPCError? {
+        if (rawValue == nil) {
+            return nil
+        } else {
+            if rawValue > GRPCError.Unauthenticated.rawValue {
+                return GRPCError(rawValue: 2)
+            } else {
+                return GRPCError(rawValue: rawValue!)
+            }
+        }
+    }
+
+    static func fromNSError(error: NSError?) -> GRPCError? {
+        if let error = error {
+            if error.code == 404 || error.code == -1011 {
+                return GRPCError.NotFound
+            } else if error.code == 500 {
+                return GRPCError.Internal
+            } else if error.code == -1004 {
+               return GRPCError.ConnectFailed
+            } else if error.code == -1005 {
+              return GRPCError.ConnectionLost
+            } else if error.code == -1001 {
+              return GRPCError.DeadlineExceeded
+            } else {
+                print ("NSError: \(error)")
+                return GRPCError.Unknown
+            }
+        } else {
+            return nil
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .Ok:
+            return "服务器正常"
+        case .Canceled:
+            return "服务器取消"
+        case .Unknown:
+            return "未知服务器错误"
+        case .InvalidArgument:
+            return "服务器参数错误"
+        case .DeadlineExceeded:
+            return "服务器超时"
+        case .NotFound:
+            return "服务器对象不存在"
+        case .AlreadyExists:
+            return "服务器对象已经存在"
+        case .PermissionDenied:
+            return "服务器权限不足"
+        case .Unauthenticated:
+            return "登录失效"
+        case .ResourceExhausted:
+            return "服务器资源耗竭"
+        case .FailedPrecondition:
+            return "服务器没有满足前提条件"
+        case .Aborted:
+            return "服务器取消"
+        case .OutOfRange:
+            return "服务器超过范围"
+        case .Unimplemented:
+            return "服务器未实现"
+        case .Internal:
+            return "服务器内部错误"
+        case .Unavailable:
+            return "服务器不可用"
+        case .DataLoss:
+            return "服务器数据丢失"
+
+        case .ConnectFailed:
+            return "无法连接服务器"
+        case .ConnectionLost:
+            return "失去服务器连接"
+        }
+    }
+}
+
 // Store manager to retain its reference
 private var managerStore: [String: Alamofire.Manager] = [:]
 
@@ -89,8 +220,14 @@ class AlamofireRequestBuilder<T>: RequestBuilder<T> {
             }
             if let json: AnyObject = response.result.value {
                 let body = Decoders.decode(clazz: T.self, source: json)
-                completion(response: Response(response: response.response!, body: body), error: nil)
-                return
+                let grpcStatus = Decoders.decode(clazz: GRPCStatus.self, source: json)
+                if grpcStatus.isError {
+                    completion(response: Response(response: response.response!, body: body), error: grpcStatus.error)
+                    return
+                } else {
+                    completion(response: Response(response: response.response!, body: body), error: nil)
+                    return
+                }
             } else if "" is T {
                 // swagger-parser currently doesn't support void, which will be fixed in future swagger-parser release
                 // https://github.com/swagger-api/swagger-parser/pull/34
