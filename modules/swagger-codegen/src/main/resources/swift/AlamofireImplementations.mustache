@@ -78,17 +78,17 @@ enum GRPCError: Int, ErrorType, CustomStringConvertible {
     }
 
     static func fromNSError(error: NSError?) -> GRPCError? {
+        var codeMap: [Int: GRPCError] = [404: .NotFound,
+                                         -1011: .NotFound,
+                                         500: .Internal,
+                                         -1004: .ConnectFailed,
+                                         -1005: .ConnectionLost,
+                                         -1001: .DeadlineExceeded,
+                                         -6003: .Unauthenticated
+                                         ]
         if let error = error {
-            if error.code == 404 || error.code == -1011 {
-                return GRPCError.NotFound
-            } else if error.code == 500 {
-                return GRPCError.Internal
-            } else if error.code == -1004 {
-               return GRPCError.ConnectFailed
-            } else if error.code == -1005 {
-              return GRPCError.ConnectionLost
-            } else if error.code == -1001 {
-              return GRPCError.DeadlineExceeded
+            if codeMap.keys.contains(error.code) {
+                return codeMap[error.code]
             } else {
                 print ("NSError: \(error)")
                 return GRPCError.Unknown
@@ -220,7 +220,7 @@ class AlamofireRequestBuilder<T>: RequestBuilder<T> {
             managerStore.removeValueForKey(managerId)
 
             if response.result.isFailure {
-                completion(response: nil, error: response.result.error)
+                completion(response: nil, error: GRPCError.fromNSError(response.result.error))
                 return
             }
 
