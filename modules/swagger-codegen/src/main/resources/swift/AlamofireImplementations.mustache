@@ -88,10 +88,11 @@ enum GRPCError: Int, ErrorType, CustomStringConvertible {
                                          ]
         var httpCodeMap: [Int: GRPCError] = [401: .Unauthenticated,
                                              403: .PermissionDenied,
-                                             400: .InvalidArgument]
+                                             400: .InvalidArgument,
+                                             500: .Internal]
         if let error = error {
             if codeMap.keys.contains(error.code) {
-                let err = codeMap[error.code]
+                let masterError = codeMap[error.code]
                 let parts = error.localizedFailureReason?.componentsSeparatedByString(":")
                 var rawHttpCode: Int? = 0
                 if parts != nil && parts!.count == 2 {
@@ -99,11 +100,13 @@ enum GRPCError: Int, ErrorType, CustomStringConvertible {
                 }
                 if rawHttpCode != nil {
                     let err = httpCodeMap[rawHttpCode!]
-                    print("Warning: network error \(error) convert http error to GRPC error: \(err)")
-                    return err
+                    if err != nil {
+                        print("Warning: network error \(error) convert http error to GRPC error: \(err)")
+                        return err
+                    }
                 }
-                print("Warning: network error \(error) convert to GRPC error: \(err)")
-                return err
+                print("Warning: network error \(error) convert to GRPC error: \(masterError)")
+                return masterError
             } else {
                 print("Warning: unknown network error \(error) convert to GRPC error: UNKNOWN")
                 return GRPCError.Unknown
