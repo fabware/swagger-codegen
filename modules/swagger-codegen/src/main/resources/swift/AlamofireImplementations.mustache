@@ -233,7 +233,6 @@ class AlamofireRequestBuilder<T>: RequestBuilder<T> {
         if let credential = self.credential {
             request.authenticate(usingCredential: credential)
         }
-        ServiceManager.updateUserDate()       
  
         request.validate().responseJSON(options: .AllowFragments) { response in
             managerStore.removeValueForKey(managerId)

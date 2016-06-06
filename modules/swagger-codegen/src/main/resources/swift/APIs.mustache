@@ -43,6 +43,7 @@ public class RequestBuilder<T> {
         self.parameters = parameters
         self.isBody = isBody
         
+        ServiceManager.updateUserDate()
         addHeaders({{projectName}}API.customHeaders)
     }
     
