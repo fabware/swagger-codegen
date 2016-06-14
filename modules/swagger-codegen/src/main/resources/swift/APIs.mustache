@@ -45,6 +45,23 @@ public class RequestBuilder<T> {
         
         ServiceManager.updateUserDate()
         addHeaders({{projectName}}API.customHeaders)
+
+        if kAPILogTestEnabled {
+            do {
+                let options = NSJSONWritingOptions()
+                var jsonString = ""
+                if parameters!.count > 0 {
+                    let data = try NSJSONSerialization.dataWithJSONObject(parameters!, options: options)
+                    jsonString = String.init(data: data, encoding: NSUTF8StringEncoding)!
+                }
+                let headersString = SwaggerClientAPI.customHeaders.keys.reduce("") { (last, key) -> String in
+                    return last + " -H \"\(key):\(SwaggerClientAPI.customHeaders[key]!)\""
+                }
+                print(">>> curl -X \(method) \(URLString) -d '\(jsonString)' \(headersString)")
+            } catch let error as NSError {
+                print("log http request error: \(error)")
+            }
+        }
     }
     
     public func addHeaders(aHeaders:[String:String]) {
