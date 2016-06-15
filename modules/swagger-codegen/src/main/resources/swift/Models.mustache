@@ -81,8 +81,16 @@ class Decoders {
     }
 
     static func decodeOptional<T>(clazz clazz: T.Type, source: AnyObject?) -> T? {
-        if source is NSNull {
-            return nil
+        if source is NSNull || source == nil {
+            if T.self is Int32.Type {
+                return Int32(0) as? T
+            } else if T.self is Int64.Type {
+                return Int64(0) as? T
+            } else if T.self is Int.Type {
+                return Int(0) as? T
+            } else {
+                return nil
+            }
         }
         return source.map { (source: AnyObject) -> T in
             Decoders.decode(clazz: clazz, source: source)
