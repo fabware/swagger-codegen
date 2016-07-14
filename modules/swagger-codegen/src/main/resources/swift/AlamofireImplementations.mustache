@@ -90,7 +90,8 @@ enum GRPCError: Int, ErrorType, CustomStringConvertible {
                                              403: .PermissionDenied,
                                              400: .InvalidArgument,
                                              500: .Internal,
-                                             502: .Unavailable]
+                                             502: .Unavailable,
+                                             503: .Unavailable]
         if let error = error {
             if codeMap.keys.contains(error.code) {
                 let masterError = codeMap[error.code]
