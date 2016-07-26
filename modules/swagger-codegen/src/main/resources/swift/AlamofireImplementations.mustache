@@ -177,6 +177,21 @@ class AlamofireRequestBuilder<T>: RequestBuilder<T> {
             instance.code = Decoders.decodeOptional(clazz: Int.self, source: sourceDictionary["Code"])
             return instance
         }
+        
+        Decoders.addDecoder(clazz: ResponseStatus.self) { (source: AnyObject) -> ResponseStatus in
+            let sourceDictionary = source as! [NSObject:AnyObject]
+            let status = Decoders.decodeOptional(clazz: String.self, source: sourceDictionary["status"])
+            var instance = ResponseStatus(code: "Success")
+            if status != nil {
+                instance = ResponseStatus(code: status!)
+            }
+            if let statusDescription = Decoders.decodeOptional(clazz: String.self, source: sourceDictionary["statusDescription"]) {
+                instance.rawDescription =  statusDescription
+            } else {
+                instance.rawDescription = ""
+            }
+            return instance
+        }
     }
 
     override func execute(completion: (response: Response<T>?, error: ErrorType?) -> Void) {
@@ -255,7 +270,12 @@ class AlamofireRequestBuilder<T>: RequestBuilder<T> {
                     completion(response: Response(response: response.response!, body: body), error: grpcStatus.error)
                     return
                 } else {
-                    completion(response: Response(response: response.response!, body: body), error: nil)
+                    let responseStatus = Decoders.decode(clazz: ResponseStatus.self, source: json)
+                    if responseStatus.isOK {
+                        completion(response: Response(response: response.response!, body: body), error: nil)
+                    } else {
+                        completion(response: Response(response: response.response!, body: body), error: responseStatus)
+                    }
                     return
                 }
             } else if "" is T {
