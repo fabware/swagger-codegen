@@ -55,11 +55,20 @@ public class RequestBuilder<T> {
                     jsonString = String.init(data: data, encoding: NSUTF8StringEncoding)!
                 }
                 let headersString = SwaggerClientAPI.customHeaders.keys.reduce("") { (last, key) -> String in
-                    return last + " -H \"\(key):\(SwaggerClientAPI.customHeaders[key]!)\""
+                    #if DEBUG
+                        return last + " -H \"\(key):\(SwaggerClientAPI.customHeaders[key]!)\""
+                    #else
+                        // 在release下不打印用户的密码
+                        if ["password", "pwd", "passwd"].contains(key) {
+                            return last + " -H \"\(key):***\""
+                        } else {
+                            return last + " -H \"\(key):\(SwaggerClientAPI.customHeaders[key]!)\""
+                        }
+                    #endif
                 }
-                print(">>> curl -X \(method) \(URLString) -d '\(jsonString)' \(headersString)")
+                BFLog(">>> curl -X \(method) \(URLString) -d '\(jsonString)' \(headersString)")
             } catch let error as NSError {
-                print("log http request error: \(error)")
+                BFLog("log http request error: \(error)")
             }
         }
     }
