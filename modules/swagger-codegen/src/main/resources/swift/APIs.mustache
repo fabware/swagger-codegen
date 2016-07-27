@@ -66,9 +66,9 @@ public class RequestBuilder<T> {
                         }
                     #endif
                 }
-                BFLog(">>> curl -X \(method) \(URLString) -d '\(jsonString)' \(headersString)")
+                BFLog("rpc", ">>> curl -X \(method) \(URLString) -d '\(jsonString)' \(headersString)")
             } catch let error as NSError {
-                BFLog("log http request error: \(error)")
+                BFLog("rpc", "log http request error: \(error)")
             }
         }
     }
