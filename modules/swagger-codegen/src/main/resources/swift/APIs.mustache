@@ -9,7 +9,7 @@ import Foundation
 public class {{projectName}}API {
     public static var basePath = "{{basePath}}"
     public static var credential: NSURLCredential?
-    public static var customHeaders: [String:String] = [:]  
+    public static var customHeaders: [String:String] = [:]
     static var requestBuilderFactory: RequestBuilderFactory = AlamofireRequestBuilderFactory()
 }
 
@@ -36,13 +36,14 @@ public class RequestBuilder<T> {
     let isBody: Bool
     let method: String
     let URLString: String
-    
+
     required public init(method: String, URLString: String, parameters: [String:AnyObject]?, isBody: Bool) {
         self.method = method
         self.URLString = URLString
         self.parameters = parameters
         self.isBody = isBody
-        
+        var logString: String = ">>> curl -X"
+
         ServiceManager.updateUserDate()
         addHeaders({{projectName}}API.customHeaders)
 
@@ -55,30 +56,40 @@ public class RequestBuilder<T> {
                     jsonString = String.init(data: data, encoding: NSUTF8StringEncoding)!
                 }
                 let headersString = SwaggerClientAPI.customHeaders.keys.reduce("") { (last, key) -> String in
+                    var resultString: String
                     #if DEBUG
-                        return last + " -H \"\(key):\(SwaggerClientAPI.customHeaders[key]!)\""
+                        resultString = last + " -H \"\(key):\(SwaggerClientAPI.customHeaders[key]!)\""
+                        return resultString
                     #else
                         // 在release下不打印用户的密码
                         if ["password", "pwd", "passwd"].contains(key) {
-                            return last + " -H \"\(key):***\""
+                            resultString = last + " -H \"\(key):***\""
                         } else {
-                            return last + " -H \"\(key):\(SwaggerClientAPI.customHeaders[key]!)\""
+                            resultString = last + " -H \"\(key):\(SwaggerClientAPI.customHeaders[key]!)\""
                         }
+                        return resultString
                     #endif
                 }
-                BFLog("rpc", ">>> curl -X \(method) \(URLString) -d '\(jsonString)' \(headersString)")
+                logString += method
+                logString += " "
+                logString += URLString
+                logString += " -d '"
+                logString += jsonString
+                logString += "' "
+                logString += headersString
+                BFLog("rpc", logString)
             } catch let error as NSError {
                 BFLog("rpc", "log http request error: \(error)")
             }
         }
     }
-    
+
     public func addHeaders(aHeaders:[String:String]) {
         for (header, value) in aHeaders {
             headers[header] = value
         }
     }
-    
+
     public func execute(completion: (response: Response<T>?, error: ErrorType?) -> Void) { }
 
     public func addHeader(name name: String, value: String) -> Self {
@@ -87,7 +98,7 @@ public class RequestBuilder<T> {
         }
         return self
     }
-    
+
     public func addCredential() -> Self {
         self.credential = {{projectName}}API.credential
         return self
@@ -97,4 +108,3 @@ public class RequestBuilder<T> {
 protocol RequestBuilderFactory {
     func getBuilder<T>() -> RequestBuilder<T>.Type
 }
-
